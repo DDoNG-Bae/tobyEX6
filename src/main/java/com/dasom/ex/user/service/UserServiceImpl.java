@@ -34,8 +34,6 @@ public class UserServiceImpl implements UserService{
 	private UserDao userDao;
 	private MailSender mailSender;
 	
-	
-	
 	public UserServiceImpl() {}
 	
 	public void setMailSender(MailSender mailSender) {

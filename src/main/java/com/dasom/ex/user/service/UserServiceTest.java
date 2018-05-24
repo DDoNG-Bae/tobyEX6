@@ -142,6 +142,7 @@ public class UserServiceTest {
 		UserServiceImpl userServiceImpl = new UserServiceImpl();//고립된 테스트에서는 테스트 대상 오브젝트를 직접 생성하면 된다.
 		
 		MockUserDao mockUserDao = new MockUserDao(this.users);//목 오브젝트로 만든 UserDao를 직접 DI해준다.
+		userServiceImpl.setUserDao(mockUserDao);
 		
 		MockMailSender mockMailSender = new MockMailSender();
 		userServiceImpl.setMailSender(mockMailSender);
@@ -168,7 +169,7 @@ public class UserServiceTest {
 	//getAll()에서는 스텁으로 update()에서는 목 오브젝트로서 동작하는 UserDao 타입의 테스트 대역
 	static class MockUserDao implements UserDao{
 		private List<User> users;
-		private List<User> updated = new ArrayList();
+		private List<User> updated = new ArrayList<User>();
 		
 		
 		
