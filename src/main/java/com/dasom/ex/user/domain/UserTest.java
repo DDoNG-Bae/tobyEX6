@@ -1,13 +1,10 @@
-package com.dasom.ex.user.service;
+package com.dasom.ex.user.domain;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 
 import org.junit.Before;
 import org.junit.Test;
-
-import com.dasom.ex.user.domain.Level;
-import com.dasom.ex.user.domain.User;
 
 public class UserTest {
 	User user;

@@ -1,4 +1,4 @@
-package com.dasom.ex.mail;
+package com.dasom.ex.user.mail;
 
 import org.springframework.mail.MailException;
 import org.springframework.mail.SimpleMailMessage;

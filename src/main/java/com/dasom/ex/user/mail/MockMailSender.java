@@ -1,4 +1,4 @@
-package com.dasom.ex.mail;
+package com.dasom.ex.user.mail;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -1,4 +1,4 @@
-package com.dasom.ex.user.domain;
+package com.dasom.ex.user.dao;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
@@ -22,7 +22,8 @@ import org.springframework.jdbc.support.SQLExceptionTranslator;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
-import com.dasom.ex.user.dao.UserDao;
+import com.dasom.ex.user.domain.Level;
+import com.dasom.ex.user.domain.User;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations="/applicationContext.xml")

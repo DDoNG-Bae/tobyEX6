@@ -17,21 +17,25 @@
 		<property name="dataSource" ref="dataSource"/>
 	</bean>
 	
-	<bean id="userService" class="com.dasom.ex.user.service.UserService">
-		<property name="userDao" ref="userDao"/>
+	<bean id="userService" class="com.dasom.ex.user.service.UserServiceTx">
 		<property name="transactionManager" ref="transactionManager"/>
-		<property name="mailSender" ref="mailSender"/>
+		<property name="userService" ref="userServiceImpl"/>
 	</bean>
 	
 	<bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
 		<property name="dataSource" ref="dataSource"/>
 	</bean>
 	
-	<bean id="mailSender" class="com.dasom.ex.mail.DummyMailSender"/> 
+	<bean id="mailSender" class="com.dasom.ex.user.mail.DummyMailSender"/> 
 	
 	<!-- 
 	<bean id="mailSender" class="org.springframework.mail.javamail.JavaMailSenderImpl">
 		<property name="host" value="mail.server.com"/>
 	</bean>
 	-->
+	
+	<bean id="userServiceImpl" class="com.dasom.ex.user.service.UserServiceImpl">
+		<property name="userDao" ref="userDao"/>
+		<property name="mailSender" ref="mailSender"/>
+	</bean>
 </beans>
