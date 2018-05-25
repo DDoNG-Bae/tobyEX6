@@ -4,6 +4,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.*;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -16,7 +17,11 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.theories.suppliers.TestedOnSupplier;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.internal.verification.Times;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mock.http.MockHttpInputMessage;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
@@ -121,22 +126,7 @@ public class UserServiceTest {
 		checkLevel(users.get(1), false);
 	}
 	
-	static class TestUserService extends UserServiceImpl{
-		private String id;
-		private TestUserService(String id) {
-			this.id=id;
-		}
-		
-		@Override
-		protected void upgradeLevel(User user) {
-			if(user.getId().equals(this.id)) throw new TestUserServiceException();
-			super.upgradeLevel(user);
-		}
-	}
 	
-	static class TestUserServiceException extends RuntimeException {
-	}
-
 	@Test
 	public void upgradeLevels() throws Exception{
 		UserServiceImpl userServiceImpl = new UserServiceImpl();//고립된 테스트에서는 테스트 대상 오브젝트를 직접 생성하면 된다.
@@ -161,11 +151,60 @@ public class UserServiceTest {
 		assertThat(requests.get(1), is(users.get(3).getEmail()));
 	}
 	
+	//Mockito 프레임워크를 이용한 테스트
+	@Test
+	public void mockUpgradeLevels() throws Exception {
+		UserServiceImpl userServiceImpl = new UserServiceImpl();
+		
+		//목 오브젝트생성,메소드 리턴값 설정, DI 한번에
+		UserDao mockUserDao = mock(UserDao.class);
+		when(mockUserDao.getAll()).thenReturn(this.users);
+		userServiceImpl.setUserDao(mockUserDao);
+		//
+		
+		//리턴 값 없는 메소드
+		MailSender mockMailSender = mock(MailSender.class);
+		userServiceImpl.setMailSender(mockMailSender);
+		//
+		
+		userServiceImpl.upgradeLevels();
+		
+		//목 오브젝트가 제공하는 검증 기능을 통해서 확인
+		verify(mockUserDao,times(2)).update(any(User.class));
+		verify(mockUserDao,times(2)).update(any(User.class));
+		verify(mockUserDao).update(users.get(1));
+		assertThat(users.get(1).getLevel(),is(Level.SILVER));
+		verify(mockUserDao).update(users.get(3));
+		assertThat(users.get(3).getLevel(), is(Level.GOLD));
+		
+		ArgumentCaptor<SimpleMailMessage> mailMessageArg = ArgumentCaptor.forClass(SimpleMailMessage.class);
+		verify(mockMailSender,times(2)).send(mailMessageArg.capture());//파라미터를 캡쳐할 수 있다
+		List<SimpleMailMessage> mailMessages = mailMessageArg.getAllValues();
+		assertThat(mailMessages.get(0).getTo()[0],is(users.get(1).getEmail()));
+		assertThat(mailMessages.get(1).getTo()[0],is(users.get(3).getEmail()));
+	}
+	
 	private void checkUserAndLevel(User updated, String expectedId, Level expectedLevel) {
 		assertThat(updated.getId(),is(expectedId));
 		assertThat(updated.getLevel(),is(expectedLevel));
 	}
 	
+	static class TestUserService extends UserServiceImpl{
+		private String id;
+		private TestUserService(String id) {
+			this.id=id;
+		}
+		
+		@Override
+		protected void upgradeLevel(User user) {
+			if(user.getId().equals(this.id)) throw new TestUserServiceException();
+			super.upgradeLevel(user);
+		}
+	}
+	
+	static class TestUserServiceException extends RuntimeException {
+	}
+
 	//getAll()에서는 스텁으로 update()에서는 목 오브젝트로서 동작하는 UserDao 타입의 테스트 대역
 	static class MockUserDao implements UserDao{
 		private List<User> users;
@@ -182,22 +221,16 @@ public class UserServiceTest {
 		}
 		
 		//스텁 기능 제공
-		@Override
 		public List<User> getAll() {return this.users;}
 		
 		//목 오브젝트 기능 제공
-		@Override
 		public void update(User user) {updated.add(user);}
 		
 		
 		//테스트에 사용되지 않는 메소드
-		@Override
 		public void add(User user) {throw new UnsupportedOperationException();}
-		@Override
 		public User get(String id) {throw new UnsupportedOperationException();}
-		@Override
 		public void deleteAll() {throw new UnsupportedOperationException();}
-		@Override
 		public int getCount() {throw new UnsupportedOperationException();}
 		//
 	}

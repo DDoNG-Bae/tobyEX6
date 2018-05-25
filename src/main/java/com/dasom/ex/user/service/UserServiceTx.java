@@ -20,12 +20,10 @@ public class UserServiceTx implements UserService {
 		this.userService = userService;
 	}
 
-	@Override
 	public void add(User user) {
 		userService.add(user);
 	}
 
-	@Override
 	public void upgradeLevels() {
 		TransactionStatus status = this.transactionManager.getTransaction(new DefaultTransactionDefinition());
 		try {
