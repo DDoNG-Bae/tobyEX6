@@ -6,6 +6,10 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.*;
 
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -19,6 +23,7 @@ import org.junit.experimental.theories.suppliers.TestedOnSupplier;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.internal.verification.Times;
+import org.springframework.aop.ThrowsAdvice;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mock.http.MockHttpInputMessage;
@@ -26,6 +31,8 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 import com.dasom.ex.user.dao.UserDao;
 import com.dasom.ex.user.domain.Level;
@@ -108,9 +115,13 @@ public class UserServiceTest {
 		testUserService.setUserDao(this.userDao);
 		testUserService.setMailSender(mailSender);
 		
-		UserServiceTx txUserService = new UserServiceTx();
-		txUserService.setTransactionManager(transactionManager);
-		txUserService.setUserService(testUserService);
+		TransactionHandler txHandler = new TransactionHandler();
+		txHandler.setTarget(testUserService);
+		txHandler.setTransactionManager(transactionManager);
+		txHandler.setPattern("upgradeLevels");
+		
+		UserService txUserService = (UserService)Proxy.newProxyInstance(
+				getClass().getClassLoader(),new Class[] {UserService.class}, txHandler);
 		
 		userDao.deleteAll();
 		for(User user:users) userDao.add(user);
@@ -233,5 +244,44 @@ public class UserServiceTest {
 		public void deleteAll() {throw new UnsupportedOperationException();}
 		public int getCount() {throw new UnsupportedOperationException();}
 		//
+	}
+	
+	static class TransactionHandler implements InvocationHandler{
+		private Object target;	//타깃 오브젝트
+		private PlatformTransactionManager transactionManager;//트랜젝션 기능 제공 위한 트랜젝션 매니저
+		private String pattern;	//트랜잭션 적용할 메소드 이름 패턴
+		
+		public void setTarget(Object target) {
+			this.target = target;
+		}
+
+		public void setTransactionManager(PlatformTransactionManager transactionManager) {
+			this.transactionManager = transactionManager;
+		}
+
+		public void setPattern(String pattern) {
+			this.pattern = pattern;
+		}
+
+		public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+			if(method.getName().startsWith(pattern)) {
+				return invokeInTransaction(method, args);
+			}
+			return method.invoke(target, args);
+		}
+		
+		private Object invokeInTransaction(Method method, Object[] args) throws Throwable{
+			TransactionStatus status =
+					this.transactionManager.getTransaction(new DefaultTransactionDefinition());
+			try {
+				Object ret = method.invoke(target, args);
+				this.transactionManager.commit(status);
+				return ret;
+			}catch(InvocationTargetException e) {
+				this.transactionManager.rollback(status);
+				throw e.getTargetException();
+			}
+		}
+		
 	}
 }

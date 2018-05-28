@@ -3,6 +3,8 @@ package com.dasom.ex.user.reflection;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 
 import org.junit.Test;
@@ -15,7 +17,10 @@ public class DynamicProxyTest {
 		assertThat(hello.sayHi("Toby"), is("Hi Toby"));
 		assertThat(hello.sayThankYou("Toby"), is("Thank You Toby"));
 		
-		Hello proxiedHello = new HelloUppercase(new HelloTarget());
+		Hello proxiedHello = (Hello)Proxy.newProxyInstance(
+				getClass().getClassLoader(), 
+				new Class[] {Hello.class},
+				new UppercaseHandler(new HelloTarget()));
 		
 		assertThat(proxiedHello.sayHello("Toby"), is("HELLO TOBY"));
 		assertThat(proxiedHello.sayHi("Toby"), is("HI TOBY"));
@@ -52,7 +57,7 @@ public class DynamicProxyTest {
 
 		public Object invoke(Object proxy, Method method, Object[] args)
 				throws Throwable {
-			Object ret = method.invoke(target, args);
+			Object ret = method.invoke(target, args);//타깃으로 위임, 인터페이스의 메소드 호출에 모두 적용된다.
 			if (ret instanceof String && method.getName().startsWith("say")) {
 				return ((String)ret).toUpperCase();
 			}
@@ -81,5 +86,6 @@ public class DynamicProxyTest {
 			return "Thank You " + name;
 		}
 	}
+	
 }
 
