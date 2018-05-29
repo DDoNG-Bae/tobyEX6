@@ -16,10 +16,18 @@
 	<bean id="userDao" class = "com.dasom.ex.user.dao.UserDaoJdbc">
 		<property name="dataSource" ref="dataSource"/>
 	</bean>
-	
+	<!--
 	<bean id="userService" class="com.dasom.ex.user.service.UserServiceTx">
 		<property name="transactionManager" ref="transactionManager"/>
 		<property name="userService" ref="userServiceImpl"/>
+	</bean>
+	-->
+	
+	<bean id="userService" class="com.dasom.ex.user.service.TxProxyFactoryBean">
+		<property name="target" ref="userServiceImpl"/>
+		<property name="transactionManager" ref="transactionManager"/>
+		<property name="pattern" value="upgradeLevels"/>
+		<property name="serviceInterface" value="com.dasom.ex.user.service.UserService"/>
 	</bean>
 	
 	<bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">

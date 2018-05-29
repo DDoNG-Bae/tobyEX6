@@ -25,6 +25,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.internal.verification.Times;
 import org.springframework.aop.ThrowsAdvice;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mock.http.MockHttpInputMessage;
 import org.springframework.test.annotation.DirtiesContext;
@@ -52,6 +53,7 @@ public class UserServiceTest {
 	@Autowired DataSource dataSource;
 	@Autowired MailSender mailSender;
 	@Autowired PlatformTransactionManager transactionManager;
+	@Autowired ApplicationContext context;
 	
 	List<User> users;
 	@Before
@@ -110,24 +112,23 @@ public class UserServiceTest {
 	}
 	
 	@Test
+	@DirtiesContext
 	public void upgradeAllOrNothing() throws Exception{
 		UserServiceImpl testUserService = new TestUserService(users.get(3).getId());
 		testUserService.setUserDao(this.userDao);
 		testUserService.setMailSender(mailSender);
 		
-		TransactionHandler txHandler = new TransactionHandler();
-		txHandler.setTarget(testUserService);
-		txHandler.setTransactionManager(transactionManager);
-		txHandler.setPattern("upgradeLevels");
+		TxProxyFactoryBean txProxyFactoryBean = context.getBean("&userService",TxProxyFactoryBean.class);//팩토리 빈 자체를 가져와야 하므로 빈 이름에 &를 반드시 넣어야 한다.
 		
-		UserService txUserService = (UserService)Proxy.newProxyInstance(
-				getClass().getClassLoader(),new Class[] {UserService.class}, txHandler);
+		txProxyFactoryBean.setTarget(testUserService);
+		
+		UserService userService = (UserService)txProxyFactoryBean.getObject();
 		
 		userDao.deleteAll();
 		for(User user:users) userDao.add(user);
 		
 		try {
-			txUserService.upgradeLevels();
+			testUserService.upgradeLevels();
 			fail("TestUserServiceException expected");
 		}
 		catch(TestUserServiceException e) {
