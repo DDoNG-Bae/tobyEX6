@@ -122,13 +122,13 @@ public class UserServiceTest {
 		
 		txProxyFactoryBean.setTarget(testUserService);
 		
-		UserService userService = (UserService)txProxyFactoryBean.getObject();
+		UserService txUserService = (UserService)txProxyFactoryBean.getObject();
 		
 		userDao.deleteAll();
 		for(User user:users) userDao.add(user);
 		
 		try {
-			testUserService.upgradeLevels();
+			txUserService.upgradeLevels();
 			fail("TestUserServiceException expected");
 		}
 		catch(TestUserServiceException e) {
